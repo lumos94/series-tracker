@@ -5,13 +5,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 
-export default function UpNextScreen() {
+export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Up Next</ThemedText>
+        <ThemedText type="title">Profile</ThemedText>
         <ThemedText type="default" themeColor="textSecondary">
-          Shows you follow will list their next unwatched episode here.
+          Your stats and backup settings will live here.
         </ThemedText>
       </SafeAreaView>
     </ThemedView>

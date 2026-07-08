@@ -5,13 +5,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 
-export default function UpNextScreen() {
+export default function WatchlistScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title">Up Next</ThemedText>
+        <ThemedText type="title">Watchlist</ThemedText>
         <ThemedText type="default" themeColor="textSecondary">
-          Shows you follow will list their next unwatched episode here.
+          Shows and movies you plan to watch will show up here.
         </ThemedText>
       </SafeAreaView>
     </ThemedView>
