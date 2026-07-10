@@ -1,13 +1,21 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 
-import AppTabs from '@/components/app-tabs';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 const paperLightTheme = {
   ...MD3LightTheme,
@@ -37,10 +45,16 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <PaperProvider theme={colorScheme === 'dark' ? paperDarkTheme : paperLightTheme}>
-        <AppTabs />
-      </PaperProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <PaperProvider theme={colorScheme === 'dark' ? paperDarkTheme : paperLightTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="show/[id]" options={{ title: '' }} />
+            <Stack.Screen name="movie/[id]" options={{ title: '' }} />
+          </Stack>
+        </PaperProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
