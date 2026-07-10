@@ -1,23 +1,63 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator } from 'react-native-paper';
+import { ActivityIndicator, Button, IconButton } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { backdropUrl, getMovieDetails, posterUrl } from '@/api/tmdb';
+import {
+  addToWatchlist,
+  isInWatchlist,
+  isMovieWatched,
+  markMovieUnwatched,
+  markMovieWatched,
+  removeFromWatchlist,
+} from '@/db/queries';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const movieId = Number(id);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['movie', movieId],
     queryFn: () => getMovieDetails(movieId),
   });
+
+  const { data: watched = false } = useQuery({
+    queryKey: ['is-movie-watched', movieId],
+    queryFn: () => isMovieWatched(movieId),
+  });
+
+  const { data: watchlisted = false } = useQuery({
+    queryKey: ['is-watchlisted', 'movie', movieId],
+    queryFn: () => isInWatchlist(movieId, 'movie'),
+  });
+
+  function toggleWatched() {
+    if (!data) return;
+    if (watched) {
+      markMovieUnwatched(movieId);
+    } else {
+      markMovieWatched({ id: movieId, title: data.title, posterPath: data.poster_path });
+    }
+    queryClient.invalidateQueries({ queryKey: ['is-movie-watched', movieId] });
+  }
+
+  function toggleWatchlist() {
+    if (!data) return;
+    if (watchlisted) {
+      removeFromWatchlist(movieId, 'movie');
+    } else {
+      addToWatchlist({ tmdbId: movieId, mediaType: 'movie', title: data.title, posterPath: data.poster_path });
+    }
+    queryClient.invalidateQueries({ queryKey: ['is-watchlisted', 'movie', movieId] });
+    queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+  }
 
   if (isLoading) {
     return (
@@ -64,6 +104,18 @@ export default function MovieDetailScreen() {
             </View>
           </View>
 
+          <View style={styles.actionRow}>
+            <Button mode={watched ? 'contained' : 'outlined'} onPress={toggleWatched} style={styles.actionButton}>
+              {watched ? 'Watched' : 'Mark as watched'}
+            </Button>
+            <IconButton
+              icon={watchlisted ? 'bookmark' : 'bookmark-outline'}
+              mode="outlined"
+              onPress={toggleWatchlist}
+              accessibilityLabel={watchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
+            />
+          </View>
+
           <ThemedText type="default" style={styles.overview}>
             {data.overview}
           </ThemedText>
@@ -96,6 +148,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     padding: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.three,
+  },
+  actionButton: {
+    flex: 1,
   },
   poster: {
     width: 100,

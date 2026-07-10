@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator } from 'react-native-paper';
+import { ActivityIndicator, Button, IconButton } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
@@ -13,16 +13,59 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { backdropUrl, getSeasonDetails, getTvDetails, posterUrl, type Season } from '@/api/tmdb';
+import {
+  addToWatchlist,
+  followShow,
+  getWatchedEpisodeNumbers,
+  isInWatchlist,
+  isShowFollowed,
+  markEpisodeUnwatched,
+  markEpisodeWatched,
+  markSeasonWatched,
+  removeFromWatchlist,
+  unfollowShow,
+} from '@/db/queries';
 
 function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
+  const queryClient = useQueryClient();
 
   const { data, isFetching } = useQuery({
     queryKey: ['season', tvId, season.season_number],
     queryFn: () => getSeasonDetails(tvId, season.season_number),
     enabled: isOpen,
   });
+
+  const { data: watchedNumbers = [] } = useQuery({
+    queryKey: ['watched-episodes', tvId, season.season_number],
+    queryFn: () => getWatchedEpisodeNumbers(tvId, season.season_number),
+    enabled: isOpen,
+  });
+
+  function invalidateWatchState() {
+    queryClient.invalidateQueries({ queryKey: ['watched-episodes', tvId, season.season_number] });
+    queryClient.invalidateQueries({ queryKey: ['followed-shows'] });
+  }
+
+  function toggleEpisode(episodeNumber: number) {
+    if (watchedNumbers.includes(episodeNumber)) {
+      markEpisodeUnwatched(tvId, season.season_number, episodeNumber);
+    } else {
+      markEpisodeWatched(tvId, season.season_number, episodeNumber);
+    }
+    invalidateWatchState();
+  }
+
+  function markAllWatched() {
+    if (!data) return;
+    markSeasonWatched(
+      tvId,
+      season.season_number,
+      data.episodes.map((e) => e.episode_number),
+    );
+    invalidateWatchState();
+  }
 
   return (
     <ThemedView>
@@ -50,18 +93,33 @@ function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
         <Animated.View entering={FadeIn.duration(200)}>
           <ThemedView type="backgroundElement" style={styles.episodeList}>
             {isFetching && <ActivityIndicator />}
-            {data?.episodes.map((episode) => (
-              <View key={episode.id} style={styles.episodeRow}>
-                <ThemedText type="smallBold">
-                  E{episode.episode_number}. {episode.name}
-                </ThemedText>
-                {episode.air_date && (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {episode.air_date}
-                  </ThemedText>
-                )}
-              </View>
-            ))}
+            {!isFetching && data && data.episodes.length > 0 && (
+              <Button compact onPress={markAllWatched} style={styles.markAllButton}>
+                Mark season watched
+              </Button>
+            )}
+            {data?.episodes.map((episode) => {
+              const watched = watchedNumbers.includes(episode.episode_number);
+              return (
+                <Pressable key={episode.id} style={styles.episodeRow} onPress={() => toggleEpisode(episode.episode_number)}>
+                  <View style={styles.episodeText}>
+                    <ThemedText type="smallBold">
+                      E{episode.episode_number}. {episode.name}
+                    </ThemedText>
+                    {episode.air_date && (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {episode.air_date}
+                      </ThemedText>
+                    )}
+                  </View>
+                  <IconButton
+                    icon={watched ? 'check-circle' : 'check-circle-outline'}
+                    size={22}
+                    onPress={() => toggleEpisode(episode.episode_number)}
+                  />
+                </Pressable>
+              );
+            })}
           </ThemedView>
         </Animated.View>
       )}
@@ -72,11 +130,44 @@ function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
 export default function ShowDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tvId = Number(id);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['tv', tvId],
     queryFn: () => getTvDetails(tvId),
   });
+
+  const { data: followed = false } = useQuery({
+    queryKey: ['is-followed', tvId],
+    queryFn: () => isShowFollowed(tvId),
+  });
+
+  const { data: watchlisted = false } = useQuery({
+    queryKey: ['is-watchlisted', 'tv', tvId],
+    queryFn: () => isInWatchlist(tvId, 'tv'),
+  });
+
+  function toggleFollow() {
+    if (!data) return;
+    if (followed) {
+      unfollowShow(tvId);
+    } else {
+      followShow({ id: tvId, name: data.name, posterPath: data.poster_path });
+    }
+    queryClient.invalidateQueries({ queryKey: ['is-followed', tvId] });
+    queryClient.invalidateQueries({ queryKey: ['followed-shows'] });
+  }
+
+  function toggleWatchlist() {
+    if (!data) return;
+    if (watchlisted) {
+      removeFromWatchlist(tvId, 'tv');
+    } else {
+      addToWatchlist({ tmdbId: tvId, mediaType: 'tv', title: data.name, posterPath: data.poster_path });
+    }
+    queryClient.invalidateQueries({ queryKey: ['is-watchlisted', 'tv', tvId] });
+    queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+  }
 
   if (isLoading) {
     return (
@@ -122,6 +213,18 @@ export default function ShowDetailScreen() {
             </View>
           </View>
 
+          <View style={styles.actionRow}>
+            <Button mode={followed ? 'contained' : 'outlined'} onPress={toggleFollow} style={styles.actionButton}>
+              {followed ? 'Following' : 'Follow'}
+            </Button>
+            <IconButton
+              icon={watchlisted ? 'bookmark' : 'bookmark-outline'}
+              mode="outlined"
+              onPress={toggleWatchlist}
+              accessibilityLabel={watchlisted ? 'Remove from watchlist' : 'Add to watchlist'}
+            />
+          </View>
+
           <ThemedText type="default" style={styles.overview}>
             {data.overview}
           </ThemedText>
@@ -165,6 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     padding: Spacing.four,
+    paddingBottom: Spacing.two,
   },
   poster: {
     width: 100,
@@ -175,6 +279,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     gap: Spacing.half,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.three,
+  },
+  actionButton: {
+    flex: 1,
   },
   overview: {
     paddingHorizontal: Spacing.four,
@@ -213,7 +327,17 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.two,
   },
+  markAllButton: {
+    alignSelf: 'flex-start',
+    marginBottom: Spacing.one,
+  },
   episodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  episodeText: {
+    flex: 1,
     gap: Spacing.half,
   },
 });
