@@ -20,6 +20,7 @@ sqlite.execSync(`
     show_id INTEGER NOT NULL,
     season_number INTEGER NOT NULL,
     episode_number INTEGER NOT NULL,
+    runtime_minutes INTEGER,
     watched_at TEXT NOT NULL
   );
   CREATE UNIQUE INDEX IF NOT EXISTS episodes_watched_unique ON episodes_watched (show_id, season_number, episode_number);
@@ -38,6 +39,7 @@ sqlite.execSync(`
     id INTEGER PRIMARY KEY NOT NULL,
     title TEXT NOT NULL,
     poster_path TEXT,
+    runtime_minutes INTEGER,
     watched_at TEXT NOT NULL
   );
 

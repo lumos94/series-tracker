@@ -14,6 +14,7 @@ export const episodesWatched = sqliteTable(
     showId: integer('show_id').notNull(),
     seasonNumber: integer('season_number').notNull(),
     episodeNumber: integer('episode_number').notNull(),
+    runtimeMinutes: integer('runtime_minutes'),
     watchedAt: text('watched_at').notNull(),
   },
   (table) => [uniqueIndex('episodes_watched_unique').on(table.showId, table.seasonNumber, table.episodeNumber)],
@@ -36,6 +37,7 @@ export const watchedMovies = sqliteTable('watched_movies', {
   id: integer('id').primaryKey(), // TMDB movie id
   title: text('title').notNull(),
   posterPath: text('poster_path'),
+  runtimeMinutes: integer('runtime_minutes'),
   watchedAt: text('watched_at').notNull(),
 });
 
