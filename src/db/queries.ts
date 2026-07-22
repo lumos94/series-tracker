@@ -1,7 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 
 import { db } from './client';
-import { episodesWatched, shows, watchedMovies, watchlist } from './schema';
+import { episodesWatched, shows, syncMeta, watchedMovies, watchlist } from './schema';
 import type { MediaType } from '@/api/tmdb';
 
 // --- Followed shows ---
@@ -189,4 +189,75 @@ export function getWatchStats(): WatchStats {
     showsFollowed,
     estimatedHours: Math.round(((episodeMinutes + movieMinutes) / 60) * 10) / 10,
   };
+}
+
+// --- Sync metadata ---
+
+const LAST_SYNCED_AT_KEY = 'lastSyncedAt';
+
+export function getLastSyncedAt(): string | null {
+  return db.select().from(syncMeta).where(eq(syncMeta.key, LAST_SYNCED_AT_KEY)).get()?.value ?? null;
+}
+
+export function setLastSyncedAt(isoDate: string) {
+  db.insert(syncMeta)
+    .values({ key: LAST_SYNCED_AT_KEY, value: isoDate })
+    .onConflictDoUpdate({ target: syncMeta.key, set: { value: isoDate } })
+    .run();
+}
+
+// --- Backup / restore ---
+
+export interface BackupPayload {
+  version: 1;
+  exportedAt: string;
+  shows: FollowedShow[];
+  episodesWatched: {
+    showId: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    runtimeMinutes: number | null;
+    watchedAt: string;
+  }[];
+  watchlist: WatchlistItem[];
+  watchedMovies: {
+    id: number;
+    title: string;
+    posterPath: string | null;
+    runtimeMinutes: number | null;
+    watchedAt: string;
+  }[];
+}
+
+export function exportAllData(): BackupPayload {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    shows: db.select().from(shows).all(),
+    episodesWatched: db.select().from(episodesWatched).all(),
+    watchlist: db.select().from(watchlist).all() as WatchlistItem[],
+    watchedMovies: db.select().from(watchedMovies).all(),
+  };
+}
+
+export function importAllData(payload: BackupPayload) {
+  db.transaction((tx) => {
+    tx.delete(episodesWatched).run();
+    tx.delete(watchlist).run();
+    tx.delete(watchedMovies).run();
+    tx.delete(shows).run();
+
+    for (const show of payload.shows) {
+      tx.insert(shows).values(show).run();
+    }
+    for (const episode of payload.episodesWatched) {
+      tx.insert(episodesWatched).values(episode).run();
+    }
+    for (const item of payload.watchlist) {
+      tx.insert(watchlist).values(item).run();
+    }
+    for (const movie of payload.watchedMovies) {
+      tx.insert(watchedMovies).values(movie).run();
+    }
+  });
 }

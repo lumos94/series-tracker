@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 
 import { Colors } from '@/constants/theme';
+import { maybeAutoSync } from '@/lib/backup';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,6 +43,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     SplashScreen.hideAsync();
+    maybeAutoSync();
   }, []);
 
   return (
