@@ -100,9 +100,6 @@ export function getLastWatched(showId: number): WatchCursor | null {
   return row ? { seasonNumber: row.seasonNumber, episodeNumber: row.episodeNumber } : null;
 }
 
-export function getWatchedEpisodeCount(): number {
-  return db.select().from(episodesWatched).all().length;
-}
 
 // --- Watchlist (shows or movies not yet started) ---
 
@@ -166,6 +163,30 @@ export function markMovieUnwatched(movieId: number) {
   db.delete(watchedMovies).where(eq(watchedMovies.id, movieId)).run();
 }
 
-export function getWatchedMovieCount(): number {
-  return db.select().from(watchedMovies).all().length;
+// --- Stats ---
+
+const DEFAULT_EPISODE_MINUTES = 42;
+const DEFAULT_MOVIE_MINUTES = 110;
+
+export interface WatchStats {
+  episodesWatched: number;
+  moviesWatched: number;
+  showsFollowed: number;
+  estimatedHours: number;
+}
+
+export function getWatchStats(): WatchStats {
+  const episodeRows = db.select({ runtimeMinutes: episodesWatched.runtimeMinutes }).from(episodesWatched).all();
+  const movieRows = db.select({ runtimeMinutes: watchedMovies.runtimeMinutes }).from(watchedMovies).all();
+  const showsFollowed = db.select().from(shows).all().length;
+
+  const episodeMinutes = episodeRows.reduce((sum, row) => sum + (row.runtimeMinutes ?? DEFAULT_EPISODE_MINUTES), 0);
+  const movieMinutes = movieRows.reduce((sum, row) => sum + (row.runtimeMinutes ?? DEFAULT_MOVIE_MINUTES), 0);
+
+  return {
+    episodesWatched: episodeRows.length,
+    moviesWatched: movieRows.length,
+    showsFollowed,
+    estimatedHours: Math.round(((episodeMinutes + movieMinutes) / 60) * 10) / 10,
+  };
 }
