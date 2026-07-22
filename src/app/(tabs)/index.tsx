@@ -63,7 +63,7 @@ function UpNextRow({ show }: { show: FollowedShow }) {
 
   function handleMarkWatched() {
     if (!nextEpisode) return;
-    markEpisodeWatched(show.id, nextEpisode.seasonNumber, nextEpisode.episode.episode_number);
+    markEpisodeWatched(show.id, nextEpisode.seasonNumber, nextEpisode.episode.episode_number, nextEpisode.episode.runtime);
     queryClient.invalidateQueries({ queryKey: ['season', show.id] });
     queryClient.invalidateQueries({ queryKey: ['watched-episodes', show.id] });
   }

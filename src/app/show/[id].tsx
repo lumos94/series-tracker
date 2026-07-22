@@ -52,7 +52,8 @@ function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
     if (watchedNumbers.includes(episodeNumber)) {
       markEpisodeUnwatched(tvId, season.season_number, episodeNumber);
     } else {
-      markEpisodeWatched(tvId, season.season_number, episodeNumber);
+      const runtimeMinutes = data?.episodes.find((e) => e.episode_number === episodeNumber)?.runtime ?? null;
+      markEpisodeWatched(tvId, season.season_number, episodeNumber, runtimeMinutes);
     }
     invalidateWatchState();
   }
@@ -62,7 +63,7 @@ function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
     markSeasonWatched(
       tvId,
       season.season_number,
-      data.episodes.map((e) => e.episode_number),
+      data.episodes.map((e) => ({ episodeNumber: e.episode_number, runtimeMinutes: e.runtime })),
     );
     invalidateWatchState();
   }

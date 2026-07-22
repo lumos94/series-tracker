@@ -43,7 +43,7 @@ export default function MovieDetailScreen() {
     if (watched) {
       markMovieUnwatched(movieId);
     } else {
-      markMovieWatched({ id: movieId, title: data.title, posterPath: data.poster_path });
+      markMovieWatched({ id: movieId, title: data.title, posterPath: data.poster_path, runtimeMinutes: data.runtime });
     }
     queryClient.invalidateQueries({ queryKey: ['is-movie-watched', movieId] });
   }

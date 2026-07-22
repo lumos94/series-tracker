@@ -44,9 +44,14 @@ export function getWatchedEpisodeNumbers(showId: number, seasonNumber: number): 
     .map((row) => row.episodeNumber);
 }
 
-export function markEpisodeWatched(showId: number, seasonNumber: number, episodeNumber: number) {
+export function markEpisodeWatched(
+  showId: number,
+  seasonNumber: number,
+  episodeNumber: number,
+  runtimeMinutes: number | null = null,
+) {
   db.insert(episodesWatched)
-    .values({ showId, seasonNumber, episodeNumber, watchedAt: new Date().toISOString() })
+    .values({ showId, seasonNumber, episodeNumber, runtimeMinutes, watchedAt: new Date().toISOString() })
     .onConflictDoNothing()
     .run();
 }
@@ -63,10 +68,17 @@ export function markEpisodeUnwatched(showId: number, seasonNumber: number, episo
     .run();
 }
 
-export function markSeasonWatched(showId: number, seasonNumber: number, episodeNumbers: number[]) {
+export function markSeasonWatched(
+  showId: number,
+  seasonNumber: number,
+  episodes: { episodeNumber: number; runtimeMinutes: number | null }[],
+) {
   const watchedAt = new Date().toISOString();
-  for (const episodeNumber of episodeNumbers) {
-    db.insert(episodesWatched).values({ showId, seasonNumber, episodeNumber, watchedAt }).onConflictDoNothing().run();
+  for (const { episodeNumber, runtimeMinutes } of episodes) {
+    db.insert(episodesWatched)
+      .values({ showId, seasonNumber, episodeNumber, runtimeMinutes, watchedAt })
+      .onConflictDoNothing()
+      .run();
   }
 }
 
@@ -132,9 +144,20 @@ export function isMovieWatched(movieId: number): boolean {
   return !!db.select().from(watchedMovies).where(eq(watchedMovies.id, movieId)).get();
 }
 
-export function markMovieWatched(movie: { id: number; title: string; posterPath: string | null }) {
+export function markMovieWatched(movie: {
+  id: number;
+  title: string;
+  posterPath: string | null;
+  runtimeMinutes?: number | null;
+}) {
   db.insert(watchedMovies)
-    .values({ id: movie.id, title: movie.title, posterPath: movie.posterPath, watchedAt: new Date().toISOString() })
+    .values({
+      id: movie.id,
+      title: movie.title,
+      posterPath: movie.posterPath,
+      runtimeMinutes: movie.runtimeMinutes ?? null,
+      watchedAt: new Date().toISOString(),
+    })
     .onConflictDoNothing()
     .run();
 }
