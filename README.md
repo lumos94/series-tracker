@@ -49,4 +49,3 @@ Because [TV Time](https://www.tvtime.com) is shutting down, and I refused to los
 ## Notes
 
 - Android only, by design — no iOS support planned.
-- Package name: `com.gxenofontos.tvapp`. Yes, the app is called Watchlog but the package still says `tvapp` — some things aren't worth the migration headache.
