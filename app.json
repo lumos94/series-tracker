@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tvapp",
-    "slug": "tvapp",
+    "name": "Watchlog",
+    "slug": "watch-log",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.gxenofontos.tvapp",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4B3593",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#4B3593",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -40,6 +40,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "51253034-7e1c-4099-993b-ab1e052f2174"
+      }
+    },
+    "owner": "georgexreplays-team"
   }
 }

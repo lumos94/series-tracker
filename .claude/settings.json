@@ -1,4 +1,30 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import cairosvg; print\\('ok'\\)\")",
+      "Bash(brew list *)",
+      "Read(//opt/homebrew/lib/**)",
+      "Bash(DYLD_LIBRARY_PATH=/opt/homebrew/lib python3 -c \"import cairosvg; print\\('ok'\\)\")",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(/opt/homebrew/bin/python3 -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(brew install *)",
+      "Bash(rsvg-convert --version)",
+      "Bash(python3 -c ' *)",
+      "Bash(mkdir -p /private/tmp/claude-501/-Users-giorgosxenofontos-Projects-tvapp/7ba346c8-0973-46f1-842d-74bdcd43388e/scratchpad/icon)",
+      "Bash(rsvg-convert -w 1024 -h 1024 icon.svg -o icon.png)",
+      "Bash(rsvg-convert -w 512 -h 512 background.svg -o android-icon-background.png)",
+      "Bash(rsvg-convert -w 512 -h 512 foreground.svg -o android-icon-foreground.png)",
+      "Bash(rsvg-convert -w 432 -h 432 monochrome.svg -o android-icon-monochrome.png)",
+      "Bash(rsvg-convert -w 228 -h 228 foreground.svg -o splash-icon-full.png)",
+      "Bash(rsvg-convert -w 228 -h 174 splash.svg -o splash-icon.png)",
+      "Bash(rm -f splash-icon-full.png)",
+      "Bash(cp __TRACKED_VAR__/icon.png ./icon.png)",
+      "Bash(cp __TRACKED_VAR__/android-icon-background.png ./android-icon-background.png)",
+      "Bash(cp __TRACKED_VAR__/android-icon-foreground.png ./android-icon-foreground.png)",
+      "Bash(cp __TRACKED_VAR__/android-icon-monochrome.png ./android-icon-monochrome.png)",
+      "Bash(cp __TRACKED_VAR__/splash-icon.png ./splash-icon.png)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }
