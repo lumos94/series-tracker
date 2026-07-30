@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect, type Href } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { getLastSyncedAt, getWatchStats } from '@/db/queries';
 import { backupNow, restoreFromDrive } from '@/lib/backup';
 
@@ -19,6 +21,26 @@ function StatTile({ label, value }: { label: string; value: string }) {
         {label}
       </ThemedText>
     </ThemedView>
+  );
+}
+
+function ProfileLinkRow({ href, label }: { href: Href; label: string }) {
+  const theme = useTheme();
+
+  return (
+    <Link href={href} asChild>
+      <Pressable style={({ pressed }) => pressed && styles.linkRowPressed}>
+        <ThemedView type="backgroundElement" style={styles.linkRow}>
+          <ThemedText type="default">{label}</ThemedText>
+          <SymbolView
+            name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+            size={16}
+            weight="bold"
+            tintColor={theme.textSecondary}
+          />
+        </ThemedView>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -79,47 +101,57 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.title}>
-          Profile
-        </ThemedText>
-
-        <View style={styles.grid}>
-          <StatTile label="Episodes watched" value={String(stats?.episodesWatched ?? 0)} />
-          <StatTile label="Movies watched" value={String(stats?.moviesWatched ?? 0)} />
-          <StatTile label="Shows following" value={String(stats?.showsFollowed ?? 0)} />
-          <StatTile label="Hours watched" value={String(stats?.estimatedHours ?? 0)} />
-        </View>
-
-        <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-          Hours watched is an estimate based on episode/movie runtimes from TMDB.
-        </ThemedText>
-
-        <View style={styles.backupSection}>
-          <ThemedText type="smallBold">Google Drive backup</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {formatLastSynced(lastSyncedAt)}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ThemedText type="title" style={styles.title}>
+            Profile
           </ThemedText>
-          <View style={styles.backupButtons}>
-            <Button
-              mode="contained"
-              onPress={() => backupMutation.mutate()}
-              loading={backupMutation.isPending}
-              disabled={backupMutation.isPending || restoreMutation.isPending}
-              style={styles.backupButton}
-            >
-              Backup now
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={confirmRestore}
-              loading={restoreMutation.isPending}
-              disabled={backupMutation.isPending || restoreMutation.isPending}
-              style={styles.backupButton}
-            >
-              Restore from Drive
-            </Button>
+
+          <View style={styles.grid}>
+            <StatTile label="Episodes watched" value={String(stats?.episodesWatched ?? 0)} />
+            <StatTile label="Movies watched" value={String(stats?.moviesWatched ?? 0)} />
+            <StatTile label="Shows following" value={String(stats?.showsFollowed ?? 0)} />
+            <StatTile label="Hours watched" value={String(stats?.estimatedHours ?? 0)} />
           </View>
-        </View>
+
+          <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+            Hours watched is an estimate based on episode/movie runtimes from TMDB.
+          </ThemedText>
+
+          <View style={styles.listsSection}>
+            <ThemedText type="smallBold">Your lists</ThemedText>
+            <ProfileLinkRow href="/watched/movies" label="Watched Movies" />
+            <ProfileLinkRow href="/watched/series" label="Watched Series" />
+            <ProfileLinkRow href="/watchlist/movies" label="Movie Watchlist" />
+            <ProfileLinkRow href="/watchlist/series" label="Series Watchlist" />
+          </View>
+
+          <View style={styles.backupSection}>
+            <ThemedText type="smallBold">Google Drive backup</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatLastSynced(lastSyncedAt)}
+            </ThemedText>
+            <View style={styles.backupButtons}>
+              <Button
+                mode="contained"
+                onPress={() => backupMutation.mutate()}
+                loading={backupMutation.isPending}
+                disabled={backupMutation.isPending || restoreMutation.isPending}
+                style={styles.backupButton}
+              >
+                Backup now
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={confirmRestore}
+                loading={restoreMutation.isPending}
+                disabled={backupMutation.isPending || restoreMutation.isPending}
+                style={styles.backupButton}
+              >
+                Restore from Drive
+              </Button>
+            </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -131,7 +163,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  scrollContent: {
     padding: Spacing.four,
+    paddingBottom: Spacing.six,
   },
   title: {
     marginBottom: Spacing.three,
@@ -150,6 +185,20 @@ const styles = StyleSheet.create({
   },
   note: {
     marginTop: Spacing.four,
+  },
+  listsSection: {
+    marginTop: Spacing.six,
+    gap: Spacing.two,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
+  linkRowPressed: {
+    opacity: 0.7,
   },
   backupSection: {
     marginTop: Spacing.six,

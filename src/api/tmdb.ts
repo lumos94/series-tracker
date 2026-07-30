@@ -51,6 +51,21 @@ interface RawMultiSearchResult {
   overview: string;
 }
 
+function normalizeSearchResult(
+  item: { id: number; name?: string; title?: string; first_air_date?: string; release_date?: string; poster_path: string | null; overview: string },
+  mediaType: MediaType,
+): SearchResultItem {
+  const date = mediaType === 'tv' ? item.first_air_date : item.release_date;
+  return {
+    id: item.id,
+    media_type: mediaType,
+    title: (mediaType === 'tv' ? item.name : item.title) ?? 'Untitled',
+    year: date ? date.slice(0, 4) : null,
+    poster_path: item.poster_path,
+    overview: item.overview,
+  };
+}
+
 export async function searchMulti(query: string): Promise<SearchResultItem[]> {
   if (!query.trim()) return [];
 
@@ -61,17 +76,45 @@ export async function searchMulti(query: string): Promise<SearchResultItem[]> {
 
   return data.results
     .filter((item): item is RawMultiSearchResult & { media_type: MediaType } => item.media_type !== 'person')
-    .map((item) => {
-      const date = item.media_type === 'tv' ? item.first_air_date : item.release_date;
-      return {
-        id: item.id,
-        media_type: item.media_type,
-        title: (item.media_type === 'tv' ? item.name : item.title) ?? 'Untitled',
-        year: date ? date.slice(0, 4) : null,
-        poster_path: item.poster_path,
-        overview: item.overview,
-      };
-    });
+    .map((item) => normalizeSearchResult(item, item.media_type));
+}
+
+interface RawMovieSearchResult {
+  id: number;
+  title: string;
+  release_date?: string;
+  poster_path: string | null;
+  overview: string;
+}
+
+export async function searchMovies(query: string): Promise<SearchResultItem[]> {
+  if (!query.trim()) return [];
+
+  const data = await tmdbFetch<{ results: RawMovieSearchResult[] }>('/search/movie', {
+    query,
+    include_adult: 'false',
+  });
+
+  return data.results.map((item) => normalizeSearchResult(item, 'movie'));
+}
+
+interface RawTvSearchResult {
+  id: number;
+  name: string;
+  first_air_date?: string;
+  poster_path: string | null;
+  overview: string;
+}
+
+export async function searchTv(query: string): Promise<SearchResultItem[]> {
+  if (!query.trim()) return [];
+
+  const data = await tmdbFetch<{ results: RawTvSearchResult[] }>('/search/tv', {
+    query,
+    include_adult: 'false',
+  });
+
+  return data.results.map((item) => normalizeSearchResult(item, 'tv'));
 }
 
 export interface Episode {

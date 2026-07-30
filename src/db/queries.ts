@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, max } from 'drizzle-orm';
 
 import { db } from './client';
 import { episodesWatched, shows, syncMeta, watchedMovies, watchlist } from './schema';
@@ -68,18 +68,31 @@ export function markEpisodeUnwatched(showId: number, seasonNumber: number, episo
     .run();
 }
 
-export function markSeasonWatched(
-  showId: number,
-  seasonNumber: number,
-  episodes: { episodeNumber: number; runtimeMinutes: number | null }[],
-) {
+export interface EpisodeEntry {
+  seasonNumber: number;
+  episodeNumber: number;
+  runtimeMinutes: number | null;
+}
+
+/** Bulk-marks any number of episodes (single season, multiple seasons, or an entire series) watched in one transaction. */
+export function markEpisodesWatched(showId: number, entries: EpisodeEntry[]) {
   const watchedAt = new Date().toISOString();
-  for (const { episodeNumber, runtimeMinutes } of episodes) {
-    db.insert(episodesWatched)
-      .values({ showId, seasonNumber, episodeNumber, runtimeMinutes, watchedAt })
-      .onConflictDoNothing()
-      .run();
-  }
+  db.transaction((tx) => {
+    for (const { seasonNumber, episodeNumber, runtimeMinutes } of entries) {
+      tx.insert(episodesWatched)
+        .values({ showId, seasonNumber, episodeNumber, runtimeMinutes, watchedAt })
+        .onConflictDoNothing()
+        .run();
+    }
+  });
+}
+
+export function getWatchedEpisodesForShow(showId: number): { seasonNumber: number; episodeNumber: number }[] {
+  return db
+    .select({ seasonNumber: episodesWatched.seasonNumber, episodeNumber: episodesWatched.episodeNumber })
+    .from(episodesWatched)
+    .where(eq(episodesWatched.showId, showId))
+    .all();
 }
 
 export interface WatchCursor {
@@ -161,6 +174,38 @@ export function markMovieWatched(movie: {
 
 export function markMovieUnwatched(movieId: number) {
   db.delete(watchedMovies).where(eq(watchedMovies.id, movieId)).run();
+}
+
+export interface WatchedMovie {
+  id: number;
+  title: string;
+  posterPath: string | null;
+  runtimeMinutes: number | null;
+  watchedAt: string;
+}
+
+export function getWatchedMovies(): WatchedMovie[] {
+  return db.select().from(watchedMovies).orderBy(desc(watchedMovies.watchedAt)).all();
+}
+
+export interface WatchedShowSummary {
+  showId: number;
+  episodeCount: number;
+  lastWatchedAt: string;
+}
+
+/** Series with any watched episodes, grouped by show. Not sourced from `shows` — a show can have watched episodes without being followed. */
+export function getWatchedShowSummaries(): WatchedShowSummary[] {
+  return db
+    .select({
+      showId: episodesWatched.showId,
+      episodeCount: count(episodesWatched.id),
+      lastWatchedAt: max(episodesWatched.watchedAt),
+    })
+    .from(episodesWatched)
+    .groupBy(episodesWatched.showId)
+    .orderBy(desc(max(episodesWatched.watchedAt)))
+    .all() as WatchedShowSummary[];
 }
 
 // --- Stats ---

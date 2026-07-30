@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator, Button, IconButton } from 'react-native-paper';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -17,16 +17,41 @@ import {
   addToWatchlist,
   followShow,
   getWatchedEpisodeNumbers,
+  getWatchedEpisodesForShow,
   isInWatchlist,
   isShowFollowed,
+  markEpisodesWatched,
   markEpisodeUnwatched,
   markEpisodeWatched,
-  markSeasonWatched,
   removeFromWatchlist,
   unfollowShow,
 } from '@/db/queries';
+import { getUnwatchedEpisodesBefore, markEntireShowWatched } from '@/lib/watch-actions';
 
-function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
+/** Cheap, sync heuristic (no network) for whether any episode before (targetSeason, targetEpisode) is still unwatched. */
+function hasUnwatchedPrior(
+  watched: { seasonNumber: number; episodeNumber: number }[],
+  allSeasons: Season[],
+  targetSeasonNumber: number,
+  targetEpisodeNumber: number,
+): boolean {
+  for (const s of allSeasons) {
+    if (s.season_number > 0 && s.season_number < targetSeasonNumber) {
+      const watchedCount = watched.filter((w) => w.seasonNumber === s.season_number).length;
+      if (watchedCount < s.episode_count) return true;
+    }
+  }
+
+  for (let episodeNumber = 1; episodeNumber < targetEpisodeNumber; episodeNumber++) {
+    if (!watched.some((w) => w.seasonNumber === targetSeasonNumber && w.episodeNumber === episodeNumber)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function SeasonSection({ tvId, season, allSeasons }: { tvId: number; season: Season; allSeasons: Season[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -46,24 +71,51 @@ function SeasonSection({ tvId, season }: { tvId: number; season: Season }) {
   function invalidateWatchState() {
     queryClient.invalidateQueries({ queryKey: ['watched-episodes', tvId, season.season_number] });
     queryClient.invalidateQueries({ queryKey: ['followed-shows'] });
+    queryClient.invalidateQueries({ queryKey: ['watched-shows'] });
+    queryClient.invalidateQueries({ queryKey: ['watch-stats'] });
+  }
+
+  function markSingleEpisodeWatched(episodeNumber: number, runtimeMinutes: number | null) {
+    markEpisodeWatched(tvId, season.season_number, episodeNumber, runtimeMinutes);
+    invalidateWatchState();
+  }
+
+  async function markWithPriorEpisodes(episodeNumber: number, runtimeMinutes: number | null) {
+    const priorEntries = await getUnwatchedEpisodesBefore(queryClient, tvId, season.season_number, episodeNumber);
+    markEpisodesWatched(tvId, [...priorEntries, { seasonNumber: season.season_number, episodeNumber, runtimeMinutes }]);
+    invalidateWatchState();
   }
 
   function toggleEpisode(episodeNumber: number) {
     if (watchedNumbers.includes(episodeNumber)) {
       markEpisodeUnwatched(tvId, season.season_number, episodeNumber);
-    } else {
-      const runtimeMinutes = data?.episodes.find((e) => e.episode_number === episodeNumber)?.runtime ?? null;
-      markEpisodeWatched(tvId, season.season_number, episodeNumber, runtimeMinutes);
+      invalidateWatchState();
+      return;
     }
-    invalidateWatchState();
+
+    const runtimeMinutes = data?.episodes.find((e) => e.episode_number === episodeNumber)?.runtime ?? null;
+    const watched = getWatchedEpisodesForShow(tvId);
+
+    if (hasUnwatchedPrior(watched, allSeasons, season.season_number, episodeNumber)) {
+      Alert.alert(
+        'Earlier episodes unwatched',
+        'There are earlier episodes of this show marked unwatched. Mark those as watched too?',
+        [
+          { text: 'No, just this one', style: 'cancel', onPress: () => markSingleEpisodeWatched(episodeNumber, runtimeMinutes) },
+          { text: 'Yes, mark all', onPress: () => markWithPriorEpisodes(episodeNumber, runtimeMinutes) },
+        ],
+      );
+      return;
+    }
+
+    markSingleEpisodeWatched(episodeNumber, runtimeMinutes);
   }
 
   function markAllWatched() {
     if (!data) return;
-    markSeasonWatched(
+    markEpisodesWatched(
       tvId,
-      season.season_number,
-      data.episodes.map((e) => ({ episodeNumber: e.episode_number, runtimeMinutes: e.runtime })),
+      data.episodes.map((e) => ({ seasonNumber: season.season_number, episodeNumber: e.episode_number, runtimeMinutes: e.runtime })),
     );
     invalidateWatchState();
   }
@@ -170,6 +222,17 @@ export default function ShowDetailScreen() {
     queryClient.invalidateQueries({ queryKey: ['watchlist'] });
   }
 
+  const markShowWatchedMutation = useMutation({
+    mutationFn: () => markEntireShowWatched(queryClient, tvId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watched-episodes', tvId] });
+      queryClient.invalidateQueries({ queryKey: ['followed-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['watched-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['watch-stats'] });
+    },
+    onError: (error: Error) => Alert.alert("Couldn't mark watched", error.message),
+  });
+
   if (isLoading) {
     return (
       <ThemedView style={styles.centered}>
@@ -230,14 +293,26 @@ export default function ShowDetailScreen() {
             {data.overview}
           </ThemedText>
 
-          <ThemedText type="smallBold" style={styles.seasonsHeading}>
-            Seasons
-          </ThemedText>
+          <View style={styles.seasonsHeadingRow}>
+            <ThemedText type="smallBold">Seasons</ThemedText>
+            <Button
+              compact
+              loading={markShowWatchedMutation.isPending}
+              disabled={markShowWatchedMutation.isPending}
+              onPress={() => markShowWatchedMutation.mutate()}>
+              Mark all watched
+            </Button>
+          </View>
           <View style={styles.seasonsList}>
             {data.seasons
               .filter((season) => season.season_number > 0)
               .map((season) => (
-                <SeasonSection key={season.id} tvId={tvId} season={season} />
+                <SeasonSection
+                  key={season.id}
+                  tvId={tvId}
+                  season={season}
+                  allSeasons={data.seasons.filter((s) => s.season_number > 0)}
+                />
               ))}
           </View>
         </ScrollView>
@@ -295,7 +370,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.four,
   },
-  seasonsHeading: {
+  seasonsHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.two,
   },
