@@ -1,8 +1,29 @@
-# Welcome to your Expo app 👋
+# 📺 Watchlog
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Your TV shows and movies, tracked. No ads, no algorithm, no subscription — just you and your watch history.
 
-## Get started
+## Why does this exist?
+
+Because [TV Time](https://www.tvtime.com) is shutting down, and I refused to lose track of what episode I'm on for a dozen shows at once. So instead of migrating to some other app I don't fully trust, I built my own. It's Android-only, it's for personal use, and it does exactly what I need and nothing I don't.
+
+**This entire project was vibe coded** with [Claude Code](https://claude.com/claude-code) — I described what I wanted, and an AI agent wrote it, debugged it, and shipped it. No hand-crafted boilerplate here.
+
+## What it does
+
+- 🔍 Search TV shows and movies (powered by [TMDB](https://www.themoviedb.org))
+- ✅ Mark episodes and movies as watched, track runtime as you go
+- 📋 Keep a watchlist of what's next
+- 📊 See stats on what you've watched
+- ☁️ Back up and restore your watch history to/from Google Drive — because losing this data twice would be embarrassing
+
+## How it's built
+
+- [Expo](https://expo.dev) (React Native) + TypeScript + Expo Router
+- Local-first: everything lives in SQLite on your device via [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) + [`drizzle-orm`](https://orm.drizzle.team) — no backend server to maintain or pay for
+- Google Drive as the only "cloud" — auto-synced backups, manual restore
+- [`react-native-paper`](https://reactnativepaper.com) for UI, [`@tanstack/react-query`](https://tanstack.com/query) for TMDB caching
+
+## Running it locally
 
 1. Install dependencies
 
@@ -10,47 +31,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Add your own TMDB API key and Google OAuth web client ID to a `.env.local` file:
 
-   ```bash
-   npx expo start
+   ```
+   EXPO_PUBLIC_TMDB_API_KEY=your_key_here
+   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your_client_id_here
    ```
 
-In the output, you'll find options to open the app in a
+3. Start the app
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   ```bash
+   npx expo run:android
+   ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   Google Sign-In requires a native dev client (not Expo Go), so this project uses `expo-dev-client`.
 
-## Get a fresh project
+## Notes
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Android only, by design — no iOS support planned.
+- Package name: `com.gxenofontos.tvapp`. Yes, the app is called Watchlog but the package still says `tvapp` — some things aren't worth the migration headache.
