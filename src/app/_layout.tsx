@@ -54,6 +54,10 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="show/[id]" options={{ title: '' }} />
             <Stack.Screen name="movie/[id]" options={{ title: '' }} />
+            <Stack.Screen name="watched/movies" options={{ title: 'Watched Movies' }} />
+            <Stack.Screen name="watched/series" options={{ title: 'Watched Series' }} />
+            <Stack.Screen name="watchlist/movies" options={{ title: 'Movie Watchlist' }} />
+            <Stack.Screen name="watchlist/series" options={{ title: 'Series Watchlist' }} />
           </Stack>
         </PaperProvider>
       </ThemeProvider>

@@ -1,15 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { Link } from 'expo-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActivityIndicator, Searchbar } from 'react-native-paper';
+import { ActivityIndicator, IconButton, SegmentedButtons, Searchbar } from 'react-native-paper';
 
+import { searchMovies, searchTv, type SearchResultItem } from '@/api/tmdb';
+import { MediaRow } from '@/components/media-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { posterUrl, searchMulti, type SearchResultItem } from '@/api/tmdb';
+import { markEntireShowWatched } from '@/lib/watch-actions';
+
+type SearchMode = 'movie' | 'tv';
 
 function useDebouncedValue<T>(value: T, delayMs: number) {
   const [debounced, setDebounced] = useState(value);
@@ -22,42 +24,68 @@ function useDebouncedValue<T>(value: T, delayMs: number) {
   return debounced;
 }
 
-function ResultRow({ item }: { item: SearchResultItem }) {
-  const poster = posterUrl(item.poster_path, 'w185');
-  const href =
-    item.media_type === 'tv'
-      ? ({ pathname: '/show/[id]', params: { id: String(item.id) } } as const)
-      : ({ pathname: '/movie/[id]', params: { id: String(item.id) } } as const);
+function MovieResultRow({ item }: { item: SearchResultItem }) {
+  return (
+    <MediaRow
+      href={{ pathname: '/movie/[id]', params: { id: String(item.id) } } as const}
+      title={item.title}
+      subtitle={item.year ?? undefined}
+      posterPath={item.poster_path}
+    />
+  );
+}
+
+function TvResultRow({ item }: { item: SearchResultItem }) {
+  const queryClient = useQueryClient();
+
+  const markWatchedMutation = useMutation({
+    mutationFn: () => markEntireShowWatched(queryClient, item.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watched-episodes', item.id] });
+      queryClient.invalidateQueries({ queryKey: ['followed-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['watched-shows'] });
+      queryClient.invalidateQueries({ queryKey: ['watch-stats'] });
+    },
+    onError: (error: Error) => Alert.alert("Couldn't mark watched", error.message),
+  });
+
+  function confirmMarkWatched() {
+    Alert.alert('Mark as watched?', `Mark all of "${item.title}" as watched?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Mark watched', onPress: () => markWatchedMutation.mutate() },
+    ]);
+  }
 
   return (
-    <Link href={href} asChild>
-      <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-        {poster ? (
-          <Image source={{ uri: poster }} style={styles.poster} contentFit="cover" />
+    <MediaRow
+      href={{ pathname: '/show/[id]', params: { id: String(item.id) } } as const}
+      title={item.title}
+      subtitle={item.year ?? undefined}
+      posterPath={item.poster_path}
+      trailing={
+        markWatchedMutation.isPending ? (
+          <ActivityIndicator style={styles.trailingSpinner} />
         ) : (
-          <ThemedView type="backgroundElement" style={styles.poster} />
-        )}
-        <View style={styles.rowText}>
-          <ThemedText type="default" numberOfLines={2}>
-            {item.title}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.media_type === 'tv' ? 'TV Show' : 'Movie'}
-            {item.year ? ` · ${item.year}` : ''}
-          </ThemedText>
-        </View>
-      </Pressable>
-    </Link>
+          <IconButton
+            icon="check-circle-outline"
+            size={26}
+            onPress={confirmMarkWatched}
+            accessibilityLabel="Mark entire series watched"
+          />
+        )
+      }
+    />
   );
 }
 
 export default function SearchScreen() {
+  const [mode, setMode] = useState<SearchMode>('movie');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 400);
 
   const { data, isFetching, isError } = useQuery({
-    queryKey: ['search', debouncedQuery],
-    queryFn: () => searchMulti(debouncedQuery),
+    queryKey: ['search', mode, debouncedQuery],
+    queryFn: () => (mode === 'movie' ? searchMovies(debouncedQuery) : searchTv(debouncedQuery)),
     enabled: debouncedQuery.trim().length > 0,
   });
 
@@ -67,8 +95,19 @@ export default function SearchScreen() {
         <ThemedText type="title" style={styles.title}>
           Search
         </ThemedText>
+
+        <SegmentedButtons
+          value={mode}
+          onValueChange={(value) => setMode(value as SearchMode)}
+          style={styles.segmented}
+          buttons={[
+            { value: 'movie', label: 'Movies' },
+            { value: 'tv', label: 'TV Shows' },
+          ]}
+        />
+
         <Searchbar
-          placeholder="Search shows and movies"
+          placeholder={mode === 'movie' ? 'Search movies' : 'Search TV shows'}
           value={query}
           onChangeText={setQuery}
           style={styles.searchbar}
@@ -91,7 +130,7 @@ export default function SearchScreen() {
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => `${item.media_type}-${item.id}`}
-          renderItem={({ item }) => <ResultRow item={item} />}
+          renderItem={({ item }) => (mode === 'movie' ? <MovieResultRow item={item} /> : <TvResultRow item={item} />)}
           contentContainerStyle={styles.listContent}
         />
       </SafeAreaView>
@@ -111,6 +150,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     marginBottom: Spacing.three,
   },
+  segmented: {
+    marginBottom: Spacing.three,
+  },
   searchbar: {
     marginBottom: Spacing.three,
   },
@@ -124,21 +166,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.six,
   },
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-  },
-  rowPressed: {
-    opacity: 0.7,
-  },
-  poster: {
-    width: 64,
-    height: 96,
-    borderRadius: Spacing.one,
-  },
-  rowText: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: Spacing.half,
+  trailingSpinner: {
+    marginHorizontal: Spacing.three,
   },
 });
