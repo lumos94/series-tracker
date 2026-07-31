@@ -10,8 +10,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { getMovieDetails, getTvDetails, type MediaType } from '@/api/tmdb';
-import { getFollowedShows, getWatchedEpisodesForShow, getWatchedMovies, getWatchlist } from '@/db/queries';
-import { computeEpisodeProgress, type WatchStatus } from '@/lib/watch-status';
+import { getFollowedShows, getWatchedMovies, getWatchlist } from '@/db/queries';
+import { computeEpisodeProgress, useWatchedEpisodeCounts, type WatchStatus } from '@/lib/watch-status';
 
 interface Entry {
   id: number;
@@ -38,6 +38,7 @@ function useWatchlistEntries() {
 
   const tvQueries = useQueries({ queries: tvIds.map((id) => ({ queryKey: ['tv', id], queryFn: () => getTvDetails(id) })) });
   const movieQueries = useQueries({ queries: movieIds.map((id) => ({ queryKey: ['movie', id], queryFn: () => getMovieDetails(id) })) });
+  const watchedCounts = useWatchedEpisodeCounts(tvIds);
 
   const isLoading = tvQueries.some((q) => q.isLoading) || movieQueries.some((q) => q.isLoading);
 
@@ -49,8 +50,7 @@ function useWatchlistEntries() {
       if (!details) return;
       const followedShow = followed.find((s) => s.id === id);
       const watchlistEntry = watchlistTv.find((w) => w.tmdbId === id);
-      const watchedCount = getWatchedEpisodesForShow(id).length;
-      const progress = computeEpisodeProgress(details.seasons, watchedCount);
+      const progress = computeEpisodeProgress(details.seasons, watchedCounts[i] ?? 0);
       const status: WatchStatus = followedShow
         ? progress >= 100 && details.seasons.some((s) => s.season_number > 0)
           ? 'completed'
@@ -89,7 +89,7 @@ function useWatchlistEntries() {
 
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tvQueries, movieQueries]);
+  }, [tvQueries, movieQueries, watchedCounts]);
 
   return { entries, isLoading };
 }

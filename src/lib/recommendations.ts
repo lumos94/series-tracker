@@ -8,8 +8,8 @@ import {
   type DiscoverItem,
   type MediaType,
 } from '@/api/tmdb';
-import { getFollowedShows, getWatchedEpisodesForShow, getWatchedMovies } from '@/db/queries';
-import { computeEpisodeProgress, type WatchStatus } from '@/lib/watch-status';
+import { getFollowedShows, getWatchedMovies } from '@/db/queries';
+import { computeEpisodeProgress, useWatchedEpisodeCounts, type WatchStatus } from '@/lib/watch-status';
 
 export interface UserHistoryInput {
   id: number;
@@ -159,6 +159,7 @@ export function useTrackedHistory() {
     })),
   });
 
+  const watchedCounts = useWatchedEpisodeCounts(followed.map((s) => s.id));
   const isLoading = showQueries.some((q) => q.isLoading) || movieQueries.some((q) => q.isLoading);
 
   const history: UserHistoryInput[] = [];
@@ -166,8 +167,7 @@ export function useTrackedHistory() {
   followed.forEach((show, i) => {
     const details = showQueries[i]?.data;
     if (!details) return;
-    const watchedCount = getWatchedEpisodesForShow(show.id).length;
-    const progress = computeEpisodeProgress(details.seasons, watchedCount);
+    const progress = computeEpisodeProgress(details.seasons, watchedCounts[i] ?? 0);
     history.push({
       id: show.id,
       type: 'tv',

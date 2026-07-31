@@ -27,7 +27,7 @@ import {
   removeFromWatchlist,
   unfollowShow,
 } from '@/db/queries';
-import { computeEpisodeProgress } from '@/lib/watch-status';
+import { computeEpisodeProgress, useWatchedEpisodes } from '@/lib/watch-status';
 import { getUnwatchedEpisodesBefore, markEntireShowWatched } from '@/lib/watch-actions';
 
 /** Cheap, sync heuristic (no network) for whether any episode before (targetSeason, targetEpisode) is still unwatched. */
@@ -71,6 +71,8 @@ export default function ShowDetailScreen() {
     queryKey: ['watched-episodes', tvId, selectedSeason],
     queryFn: () => getWatchedEpisodeNumbers(tvId, selectedSeason),
   });
+
+  const watchedCount = useWatchedEpisodes(tvId).length;
 
   function invalidateWatchState() {
     queryClient.invalidateQueries({ queryKey: ['watched-episodes', tvId] });
@@ -159,7 +161,6 @@ export default function ShowDetailScreen() {
 
   const backdrop = backdropUrl(data.backdrop_path, 'w780');
   const poster = posterUrl(data.poster_path);
-  const watchedCount = getWatchedEpisodesForShow(tvId).length;
   const totalEpisodes = seasons.reduce((sum, s) => sum + s.episode_count, 0);
   const progress = computeEpisodeProgress(data.seasons, watchedCount);
   const status = followed ? (progress >= 100 && totalEpisodes > 0 ? 'completed' : 'watching') : watchlisted ? 'planned' : undefined;

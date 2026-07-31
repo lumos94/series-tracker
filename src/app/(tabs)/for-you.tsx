@@ -11,15 +11,16 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { getTvDetails } from '@/api/tmdb';
-import { getFollowedShows, getWatchedEpisodesForShow } from '@/db/queries';
+import { getFollowedShows } from '@/db/queries';
 import { useRecommendations } from '@/lib/recommendations';
-import { computeEpisodeProgress } from '@/lib/watch-status';
+import { computeEpisodeProgress, useWatchedEpisodeCounts } from '@/lib/watch-status';
 
 function ContinueWatching() {
   const shows = getFollowedShows();
   const queries = useQueries({
     queries: shows.map((show) => ({ queryKey: ['tv', show.id], queryFn: () => getTvDetails(show.id) })),
   });
+  const watchedCounts = useWatchedEpisodeCounts(shows.map((s) => s.id));
 
   if (shows.length === 0) return null;
 
@@ -27,7 +28,7 @@ function ContinueWatching() {
     <HorizontalList title="Continue Watching">
       {shows.map((show, i) => {
         const details = queries[i]?.data;
-        const progress = details ? computeEpisodeProgress(details.seasons, getWatchedEpisodesForShow(show.id).length) : 0;
+        const progress = details ? computeEpisodeProgress(details.seasons, watchedCounts[i] ?? 0) : 0;
         return <PosterCard key={show.id} id={show.id} type="tv" title={show.name} posterPath={show.posterPath} status="watching" progress={progress} size="md" />;
       })}
     </HorizontalList>

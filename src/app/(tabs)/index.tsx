@@ -15,8 +15,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { backdropUrl, getSeasonDetails, getTrending, getTvDetails, type Episode } from '@/api/tmdb';
-import { getFollowedShows, getWatchedEpisodesForShow, getWatchStats, type FollowedShow } from '@/db/queries';
-import { computeEpisodeProgress } from '@/lib/watch-status';
+import { getFollowedShows, getWatchStats, type FollowedShow } from '@/db/queries';
+import { computeEpisodeProgress, useWatchedEpisodes } from '@/lib/watch-status';
 
 interface NextEpisode {
   episode: Episode;
@@ -24,7 +24,7 @@ interface NextEpisode {
 }
 
 function useNextEpisode(show: FollowedShow) {
-  const watched = getWatchedEpisodesForShow(show.id);
+  const watched = useWatchedEpisodes(show.id);
   const lastWatched = watched.reduce<{ seasonNumber: number; episodeNumber: number } | null>((max, w) => {
     if (!max || w.seasonNumber > max.seasonNumber || (w.seasonNumber === max.seasonNumber && w.episodeNumber > max.episodeNumber)) {
       return w;
