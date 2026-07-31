@@ -1,6 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useFocusEffect, type Href } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { Link, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,37 +8,24 @@ import { Button } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { getLastSyncedAt, getWatchStats } from '@/db/queries';
+import { Colors, Spacing } from '@/constants/theme';
+import { getLastSyncedAt } from '@/db/queries';
 import { backupNow, restoreFromDrive } from '@/lib/backup';
 
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <ThemedView type="backgroundElement" style={styles.tile}>
-      <ThemedText type="title">{value}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-    </ThemedView>
-  );
-}
-
-function ProfileLinkRow({ href, label }: { href: Href; label: string }) {
-  const theme = useTheme();
-
+function MenuRow({ icon, label, description, href }: { icon: keyof typeof Ionicons.glyphMap; label: string; description: string; href: '/stats' }) {
   return (
     <Link href={href} asChild>
-      <Pressable style={({ pressed }) => pressed && styles.linkRowPressed}>
-        <ThemedView type="backgroundElement" style={styles.linkRow}>
-          <ThemedText type="default">{label}</ThemedText>
-          <SymbolView
-            name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-            size={16}
-            weight="bold"
-            tintColor={theme.textSecondary}
-          />
-        </ThemedView>
+      <Pressable style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}>
+        <View style={styles.menuIcon}>
+          <Ionicons name={icon} size={18} color={Colors.dark.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <ThemedText type="smallBold">{label}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {description}
+          </ThemedText>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.dark.textSecondary} />
       </Pressable>
     </Link>
   );
@@ -49,22 +36,13 @@ function formatLastSynced(isoDate: string | null | undefined) {
   return `Last backed up ${new Date(isoDate).toLocaleString()}`;
 }
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const queryClient = useQueryClient();
 
-  const { data: stats } = useQuery({
-    queryKey: ['watch-stats'],
-    queryFn: () => getWatchStats(),
-  });
-
-  const { data: lastSyncedAt } = useQuery({
-    queryKey: ['last-synced-at'],
-    queryFn: () => getLastSyncedAt(),
-  });
+  const { data: lastSyncedAt } = useQuery({ queryKey: ['last-synced-at'], queryFn: () => getLastSyncedAt() });
 
   useFocusEffect(
     useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: ['watch-stats'] });
       queryClient.invalidateQueries({ queryKey: ['last-synced-at'] });
     }, [queryClient]),
   );
@@ -100,29 +78,17 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ThemedText type="title" style={styles.title}>
-            Profile
+            Settings
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Configure your tracking experience
           </ThemedText>
 
-          <View style={styles.grid}>
-            <StatTile label="Episodes watched" value={String(stats?.episodesWatched ?? 0)} />
-            <StatTile label="Movies watched" value={String(stats?.moviesWatched ?? 0)} />
-            <StatTile label="Shows following" value={String(stats?.showsFollowed ?? 0)} />
-            <StatTile label="Hours watched" value={String(stats?.estimatedHours ?? 0)} />
-          </View>
-
-          <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-            Hours watched is an estimate based on episode/movie runtimes from TMDB.
-          </ThemedText>
-
-          <View style={styles.listsSection}>
-            <ThemedText type="smallBold">Your lists</ThemedText>
-            <ProfileLinkRow href="/watched/movies" label="Watched Movies" />
-            <ProfileLinkRow href="/watched/series" label="Watched Series" />
-            <ProfileLinkRow href="/watchlist/movies" label="Movie Watchlist" />
-            <ProfileLinkRow href="/watchlist/series" label="Series Watchlist" />
+          <View style={styles.menu}>
+            <MenuRow icon="bar-chart-outline" label="Stats" description="Episodes, movies, hours watched" href="/stats" />
           </View>
 
           <View style={styles.backupSection}>
@@ -136,8 +102,7 @@ export default function ProfileScreen() {
                 onPress={() => backupMutation.mutate()}
                 loading={backupMutation.isPending}
                 disabled={backupMutation.isPending || restoreMutation.isPending}
-                style={styles.backupButton}
-              >
+                style={styles.backupButton}>
                 Backup now
               </Button>
               <Button
@@ -145,11 +110,16 @@ export default function ProfileScreen() {
                 onPress={confirmRestore}
                 loading={restoreMutation.isPending}
                 disabled={backupMutation.isPending || restoreMutation.isPending}
-                style={styles.backupButton}
-              >
+                style={styles.backupButton}>
                 Restore from Drive
               </Button>
             </View>
+          </View>
+
+          <View style={styles.footer}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Watchlog
+            </ThemedText>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -169,36 +139,35 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   title: {
-    marginBottom: Spacing.three,
+    marginBottom: Spacing.half,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.three,
-  },
-  tile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.half,
-  },
-  note: {
+  menu: {
     marginTop: Spacing.four,
-  },
-  listsSection: {
-    marginTop: Spacing.six,
     gap: Spacing.two,
   },
-  linkRow: {
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.three,
+    gap: Spacing.three,
     borderRadius: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: Colors.dark.cosmicSurface,
+    padding: Spacing.three,
   },
-  linkRowPressed: {
+  menuRowPressed: {
     opacity: 0.7,
+  },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+  },
+  menuText: {
+    flex: 1,
   },
   backupSection: {
     marginTop: Spacing.six,
@@ -212,5 +181,9 @@ const styles = StyleSheet.create({
   },
   backupButton: {
     flexGrow: 1,
+  },
+  footer: {
+    marginTop: Spacing.six,
+    alignItems: 'center',
   },
 });
