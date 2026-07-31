@@ -33,7 +33,7 @@ export function PosterCard({ id, type, title, posterPath, status, progress, size
 
   return (
     <Link href={href} asChild>
-      <Pressable style={[styles.card, !fill && { width: sizeConfig[size].width }]}>
+      <Pressable style={StyleSheet.flatten([styles.card, !fill && { width: sizeConfig[size].width }])}>
         <View style={[styles.frame, frameStyle]}>
           {poster ? (
             <Image source={{ uri: poster }} style={styles.image} contentFit="cover" />

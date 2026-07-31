@@ -155,7 +155,7 @@ export default function WatchlistScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <ThemedText type="title">Watchlist</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

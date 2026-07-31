@@ -82,7 +82,7 @@ export default function DiscoverScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <ThemedText type="title">Discover</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

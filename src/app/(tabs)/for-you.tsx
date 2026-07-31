@@ -39,7 +39,7 @@ export default function ForYouScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Ionicons name="sparkles" size={20} color={Colors.dark.primary} />

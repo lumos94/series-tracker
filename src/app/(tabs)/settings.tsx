@@ -15,7 +15,7 @@ import { backupNow, restoreFromDrive } from '@/lib/backup';
 function MenuRow({ icon, label, description, href }: { icon: keyof typeof Ionicons.glyphMap; label: string; description: string; href: '/stats' }) {
   return (
     <Link href={href} asChild>
-      <Pressable style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}>
+      <Pressable style={styles.menuRow} android_ripple={{ color: 'rgba(139, 92, 246, 0.15)' }}>
         <View style={styles.menuIcon}>
           <Ionicons name={icon} size={18} color={Colors.dark.primary} />
         </View>
@@ -78,7 +78,7 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ThemedText type="title" style={styles.title}>
             Settings
@@ -154,9 +154,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: Colors.dark.cosmicSurface,
     padding: Spacing.three,
-  },
-  menuRowPressed: {
-    opacity: 0.7,
   },
   menuIcon: {
     width: 36,

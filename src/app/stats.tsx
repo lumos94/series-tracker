@@ -33,7 +33,7 @@ export default function StatsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.grid}>
           <StatTile label="Episodes watched" value={String(stats?.episodesWatched ?? 0)} />
           <StatTile label="Movies watched" value={String(stats?.moviesWatched ?? 0)} />
