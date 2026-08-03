@@ -49,3 +49,7 @@ Because [TV Time](https://www.tvtime.com) is shutting down, and I refused to los
 ## Notes
 
 - Android only, by design — no iOS support planned.
+
+## Docs
+
+Full project history, architecture, and design decisions live in [`docs/`](docs/README.md) — start there if you're picking this project up (human or AI).
