@@ -13,13 +13,18 @@ export default function AppTabs() {
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Up Next</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon md="play_circle" />
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="home" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="search">
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon md="search" />
+      <NativeTabs.Trigger name="for-you">
+        <NativeTabs.Trigger.Label>For You</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="auto_awesome" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="discover">
+        <NativeTabs.Trigger.Label>Discover</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="explore" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="watchlist">
@@ -27,9 +32,9 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon md="bookmark_border" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon md="account_circle" />
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon md="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

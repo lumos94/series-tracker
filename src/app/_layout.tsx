@@ -1,9 +1,16 @@
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import {
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
+import { MD3DarkTheme, PaperProvider } from 'react-native-paper';
 
 import { Colors } from '@/constants/theme';
 import { maybeAutoSync } from '@/lib/backup';
@@ -18,20 +25,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const paperLightTheme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    background: Colors.light.background,
-    surface: Colors.light.backgroundElement,
-    onSurface: Colors.light.text,
-  },
-};
-
 const paperDarkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
+    primary: Colors.dark.primary,
     background: Colors.dark.background,
     surface: Colors.dark.backgroundElement,
     onSurface: Colors.dark.text,
@@ -39,25 +37,34 @@ const paperDarkTheme = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [fontsLoaded] = useFonts({
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   useEffect(() => {
+    if (!fontsLoaded) return;
     SplashScreen.hideAsync();
     maybeAutoSync();
-  }, []);
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <PaperProvider theme={colorScheme === 'dark' ? paperDarkTheme : paperLightTheme}>
+      <ThemeProvider value={DarkTheme}>
+        <PaperProvider theme={paperDarkTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="show/[id]" options={{ title: '' }} />
-            <Stack.Screen name="movie/[id]" options={{ title: '' }} />
-            <Stack.Screen name="watched/movies" options={{ title: 'Watched Movies' }} />
-            <Stack.Screen name="watched/series" options={{ title: 'Watched Series' }} />
-            <Stack.Screen name="watchlist/movies" options={{ title: 'Movie Watchlist' }} />
-            <Stack.Screen name="watchlist/series" options={{ title: 'Series Watchlist' }} />
+            <Stack.Screen name="show/[id]" options={{ title: '', headerTransparent: true, headerTintColor: Colors.dark.text }} />
+            <Stack.Screen name="movie/[id]" options={{ title: '', headerTransparent: true, headerTintColor: Colors.dark.text }} />
+            <Stack.Screen name="stats" options={{ title: 'Stats' }} />
           </Stack>
         </PaperProvider>
       </ThemeProvider>
